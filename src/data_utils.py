@@ -177,14 +177,6 @@ def predict_extraction(linear_output, sentences_lens):
     return y_predict
 
 
-if __name__ == "__main__":
-    labels = [0,1,2 ,1,2,3,0,1,2]
-    #[(0, 4), (5, 5), (6, 8)]
-
-    #[(0, 2), (0, 4), (5, 5), (6, 8)]
-    #[(0, 2), (3, 4), (5, 5), (6, 8)] #zb
-    print (get_intervals(([0,1,1,1,2,3,0,1,2])))
-    print (get_intervals(labels))
 
 
 

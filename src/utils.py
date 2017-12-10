@@ -62,6 +62,16 @@ def get_sets(labels):
 
 
 def evaluate(gold, predicted):
+  '''
+  详情可以百度,试着取解释这几个值:
+    tp: 分词正确的
+    fn: gold中未被预测出的
+    fp: 预测错误的
+    事实上这几个意义和fn,fp并不能很好吻合
+    :param gold:
+    :param predicted:
+    :return:
+  '''
   assert len(gold) == len(predicted)
   tp = 0
   fp = 0
@@ -107,3 +117,15 @@ def get_intervals(tag):
       else:
         j += 1
   return intervals
+
+
+
+if __name__ == "__main__":
+    labels = [0,1,2,1,2,3,0,1,2]
+    #[(0, 4), (5, 5), (6, 8)]
+
+    #[(0, 2), (0, 4), (5, 5), (6, 8)]
+    #[(0, 2), (3, 4), (5, 5), (6, 8)] #zb
+    print (get_intervals(([0,1,1,1,2,3,0,1,2])))
+    print (get_intervals(labels))
+    print (evaluate([[0,1,1,1,2,3,0,1,2]],[labels]))
