@@ -89,8 +89,8 @@ def evaluate(gold, predicted):
         fn -= 1
       else:
         fp += 1
-  P = 0 if tp == 0 else 1.0 * tp / (tp + fp)
-  R = 0 if tp == 0 else 1.0 * tp / (tp + fn)
+  P = 0 if tp == 0 else 1.0 * tp / (tp + fp) #和gold比较的召回率
+  R = 0 if tp == 0 else 1.0 * tp / (tp + fn) #分词器标注结果的精度
   F = 0 if P * R == 0 else 2.0 * P * R / (P + R)
   return P, R, F
 

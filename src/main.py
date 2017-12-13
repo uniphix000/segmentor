@@ -30,27 +30,28 @@ def train(model, batch_x, batch_y, sentences_lens, optimizer):
 def eval_model(model, x_idx, y_idx, batch_size, pad_idx):
     '''
 
-    :param x_idx:
+    :param x_idx: ([],[])
     :param y_idx:
     :param batch_size:
     :param pad_idx:
     :return:
     '''
     model.eval()
-    x_size = len(x_idx)
+    x_size = len(x_idx[0])
     order = range(x_size)
     random.shuffle(list(order))
     correct_count , all_count = 0, 0
     predict_all = []
     gold_all = []
-    for batch_start in range(0, len(x_idx), batch_size):
+    for batch_start in range(0, x_size, batch_size):
         batch_end = batch_start + batch_size if batch_start \
                     + batch_size < x_size else x_size
-        batch_size_now = batch_end - batch_start
+        batch_size = batch_end - batch_start
         # print("valid_x_idx:{0}".format(valid_x_idx))
+
         batch_x, batch_y, sentences_lens  = create_batches(x_idx, y_idx, order, batch_start, batch_end, pad_idx)
         #print ("batch_x = {0}, batch_y = {1}".format(batch_x, batch_y))
-        batch_x = batch_x.view(batch_size_now, -1)
+        batch_x = (batch_x_uni, batch_x_bi) = (batch_x[0].view(batch_size, -1), batch_x[1].view(batch_size, -1))
         #train(model, batch_x, batch_y, sentences_lens, optimizer)
         correct_batch, all_count_batch, predict, y = model.forward(batch_x, batch_y, sentences_lens)
         correct_count += correct_batch
@@ -70,53 +71,62 @@ def main():
     # cmd.add_argument("--train_path", help = "path of train data", default='../data/train.txt')
     # cmd.add_argument("--devel_path", help = "path of devel data", default='../data/valid.txt')
     # cmd.add_argument("--test_path", help = "path of test data", default='../data/test.txt')
+    # cmd.add_argument("--unigram_embed_path", help = "path of test data", default='../data/unigram_100.embed')
+    # cmd.add_argument("--bigram_embed_path", help = "path of test data", default='../data/bigram_100_test.embed')
 
     cmd.add_argument("--train_path", help = "path of train data", default='../data/data/train.txt')
     cmd.add_argument("--devel_path", help = "path of devel data", default='../data/data/valid.txt')
     cmd.add_argument("--test_path", help = "path of test data", default='../data/data/test.txt')
+    cmd.add_argument("--unigram_embed_path", help = "path of test data", default='../data/data/unigram_100.embed')
+    cmd.add_argument("--bigram_embed_path", help = "path of test data", default='../data/data/bigram_100.embed')
 
-    cmd.add_argument("--embed_path", help = "path of test data", default='../data/data/unigram_100.embed')
-    cmd.add_argument("--use_pretrain_embedding", help = "path of test data", default=True)
+    cmd.add_argument("--use_pretrain_unigram_embedding", type = bool, help = "path of test data", default=True)
+    cmd.add_argument("--use_pretrain_bigram_embedding", type = bool, help = "path of test data", default=True)
     cmd.add_argument("--batch_size", help = "path of test data", default=16)
     cmd.add_argument("--max_epoch", help = "path of test data", type=int, default=20)
     cmd.add_argument("--optimizer", help = "path of test data", default='Adam')
     cmd.add_argument("--lr", help = "path of test data", default=0.001)
-    cmd.add_argument("--lr_decay", help = "path of test data", type=float, default=0.9)
-    cmd.add_argument("--embed_size", help = "path of test data", default=100)
+    cmd.add_argument("--lr_decay", help = "path of test data", type=float, default=1.0)
+    cmd.add_argument("--embed_size_uni", help = "path of test data", default=100)
+    cmd.add_argument("--embed_size_bi", help = "path of test data", default=100)
     cmd.add_argument("--hidden_size", help = "path of test data", default=256)
-    cmd.add_argument("--dropout", help = "path of test data", type=float, default=0.5)
+    cmd.add_argument("--dropout", help = "path of test data", type=float, default=0.4)
     cmd.add_argument("--clip_grad", help = "path of test data", default=5)
 
 
 
     args = cmd.parse_args()
     print ('Training Parameters As Following:',args)
-
+    print (args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding)
 
     torch.manual_seed(args.seed)
     random.seed(args.seed)
 
     logging.info('Data Loading...')
-    train_x, train_y, valid_x, valid_y, test_x, test_y = read_data(args.train_path, args.devel_path, args.test_path)
+    train_x, train_y, valid_x, valid_y, test_x, test_y = read_data(args.train_path, args.devel_path, args.test_path) #train_x [([],[]),]
     logging.info('Data Loading Complete.')
     logging.info('training_data_size = {0}, valid_data_size = {1}, test_data_size = {2}'.format(len(train_x), len(valid_x), len(test_x)))
     #print (train_x, train_y)
-    word_2_idx = Lang()
-    word_2_idx = generate_dict(args.use_pretrain_embedding, word_2_idx, args.embed_path, train_x)
+    uni_words, bi_words = [pair[0] for pair in train_x], [pair[1] for pair in train_x]
+    word_2_idx_uni = Lang()
+    word_2_idx_uni = generate_dict(args.use_pretrain_unigram_embedding, word_2_idx_uni, args.unigram_embed_path, uni_words)
+    word_2_idx_bi = Lang()
+    word_2_idx_bi = generate_dict(args.use_pretrain_bigram_embedding, word_2_idx_bi, args.bigram_embed_path, bi_words)
 
-    train_x_idx = word_to_idx(train_x, word_2_idx.word2idx)
+    train_x_idx = word_to_idx(train_x, word_2_idx_uni.word2idx, word_2_idx_bi.word2idx)  #([],[])
     train_y_idx = label_to_idx(train_y, label2idx)
-    valid_x_idx = word_to_idx(valid_x, word_2_idx.word2idx)
+    valid_x_idx = word_to_idx(valid_x, word_2_idx_uni.word2idx, word_2_idx_bi.word2idx)
     valid_y_idx = label_to_idx(valid_y, label2idx)
-    test_x_idx = word_to_idx(test_x, word_2_idx.word2idx)
+    test_x_idx = word_to_idx(test_x, word_2_idx_uni.word2idx, word_2_idx_bi.word2idx)
     test_y_idx = label_to_idx(test_y,label2idx)
-    logging.info('Word2idx Dictionary Generated! Dict Size = {0}'.format(word_2_idx.get_word_size()))
-    train_x_size = len(train_x_idx)
-    valid_x_size = len(valid_x_idx)
+    logging.info('Word2idx Dictionary Generated! Dict Size = {0}, {1}'.format(word_2_idx_uni.get_word_size(),word_2_idx_bi.get_word_size()))
+    train_x_size = len(train_x_idx[0]) #句子数
+    valid_x_size = len(valid_x_idx[0])
     order = range(train_x_size)
-    pad_idx = word_2_idx.word2idx['pad']
-    model = Model(args.use_pretrain_embedding, args.embed_size, args.hidden_size, len(label2idx), word_2_idx, \
-                  args.dropout, args.embed_path)
+    pad_idx = word_2_idx_uni.word2idx['pad']
+    model = Model(args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding, args.embed_size_uni, args.embed_size_bi, \
+                  args.hidden_size, len(label2idx), word_2_idx_uni, word_2_idx_bi,
+                  args.dropout, args.unigram_embed_path, args.bigram_embed_path)
     model = model.cuda() if use_cuda else model
     if (args.optimizer == 'SGD'):
         optimizer = optim.SGD(model.parameters(), lr=args.lr)
@@ -132,8 +142,9 @@ def main():
                         + args.batch_size < train_x_size else train_x_size
             batch_size = batch_end - batch_start
             batch_x, batch_y, sentences_lens  = create_batches(train_x_idx, train_y_idx, order, batch_start, batch_end, pad_idx)
-            #print ("batch_x = {0}, batch_y = {1}".format(batch_x, batch_y))
-            batch_x = batch_x.view(batch_size, -1)
+            #到这里batch_x:([],[])
+            #batch_x_uni, batch_x_bi = [pair[0] for pair in batch_x], [pair[1] for pair in batch_x]
+            batch_x = (batch_x_uni, batch_x_bi) = (batch_x[0].view(batch_size, -1), batch_x[1].view(batch_size, -1))
             #train(model, batch_x, batch_y, sentences_lens, optimizer)
             model.train()
             optimizer.zero_grad()

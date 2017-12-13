@@ -38,7 +38,10 @@ def read_corpus(path):
         f_train_lines = f_train.read().strip().split('\n')
         for line in f_train_lines:
             sentences, sentences_labels = line.split('\t')
-            words.append(sentences.split())
+            uni_x = sentences.split()
+            bi_x = ['<s>' + uni_x[0]] + [uni_x[i] + uni_x[i+1] for i in range(len(uni_x)-1)] + [uni_x[len(uni_x)-1] + '<s/>']
+            words_set = (uni_x, bi_x)
+            words.append(words_set)
             labels.append(sentences_labels.split())
     return words, labels
 
@@ -92,27 +95,37 @@ class Lang:
         return self.word_size
 
 
-def word_to_idx(train_x, word2idx):
+def word_to_idx(train_x, word2idx_uni, word2idx_bi):
     '''
 
     :param train_x:
     :param word2idx:
     :return:
     '''
-    train_x_idx =[[word2idx.get(word, oov) for word in sentence] for sentence in train_x]
-
+    train_x_uni = [train_x[i][0] for i in range(len(train_x))]
+    train_x_bi = [train_x[i][1] for i in range(len(train_x))]
+    train_x_idx_uni =[[word2idx_uni.get(word, oov) for word in sentence] for sentence in train_x_uni]
+    train_x_idx_bi =[[word2idx_bi.get(word, oov) for word in sentence] for sentence in train_x_bi]
+    train_x_idx = (train_x_idx_uni, train_x_idx_bi)
     # train_x_idx = [[word2idx[word] for word in sentence] for sentence in train_x]
 
     return train_x_idx
 
 
 def generate_dict(flag, word_2_idx, embed_path, train_x):
+    '''
+
+    :param flag:
+    :param word_2_idx:
+    :param embed_path:
+    :param train_x:  数据格式: [([],[])]
+    :return:
+    '''
     if (flag == True):
         embed_num, embed_size, embed_words, embed_vecs = load_embedding(embed_path)
         for word in embed_words:
             word_2_idx.add_word(word)
     train_word = flatten(train_x)
-    #print(train_word)
     for word in train_word:
         #print(word)
         word_2_idx.add_word(word)
@@ -139,24 +152,30 @@ def flatten(lst):
 def create_batches(train_x_idx, train_y_idx, order, batch_start, batch_end, pad_idx):
     '''
 
-    :param train_x_idx:
+    :param train_x_idx: ([],[])
     :param train_y_idx:
     :param order:
     :param batch_start:
     :param batch_end:
-    :return:
+    :return: x_return: ([],[])
     '''
     #print (order[batch_start:batch_end])
-    batch_x = [train_x_idx[ids] for ids in order[batch_start:batch_end]]
+    batch_x = [(train_x_idx[0][ids],train_x_idx[1][ids]) for ids in order[batch_start:batch_end]] #[(),(),...batch_size个]
+    #print (batch_x)
     batch_y = [train_y_idx[ids] for ids in order[batch_start:batch_end]]
-
-    max_length = max([len(sentence) for sentence in batch_x])
-    batch_x_padded = [[sentence + [pad_idx] * (max_length - len(sentence))] \
-                      for sentence in batch_x]
+    max_length = max([len(tuple[0]) for tuple in batch_x])
+    batch_x_padded = [([uni_sentence + [pad_idx] * (max_length - len(uni_sentence))], \
+                       [bi_sentence + [pad_idx] * (max_length + 1 - len(bi_sentence))]) \
+                      for (uni_sentence, bi_sentence) in batch_x]  #这里加1是因为bigram里句长是uni+1
 
     sentences_lens = [len(sentence) for sentence in batch_y]
     flatten_y = flatten(batch_y)
-    x_return = Variable(torch.LongTensor(batch_x_padded)).cuda() if use_cuda else Variable(torch.LongTensor(batch_x_padded))
+    batch_x_padded_uni = [batch_x_padded[i][0] for i in range(len(batch_x))]
+    batch_x_padded_bi = [batch_x_padded[i][1] for i in range(len(batch_x))]
+
+    x_return = (Variable(torch.LongTensor(batch_x_padded_uni)).cuda(), Variable(torch.LongTensor(batch_x_padded_bi)).cuda()) if \
+        use_cuda else (Variable(torch.LongTensor(batch_x_padded_uni)), Variable(torch.LongTensor(batch_x_padded_bi)))  #(,)
+
     y_return = Variable(torch.LongTensor(flatten_y)).cuda() if use_cuda else Variable(torch.LongTensor(flatten_y))
     return x_return, y_return, sentences_lens
 
