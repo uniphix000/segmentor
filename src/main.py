@@ -66,7 +66,7 @@ def eval_model(model, x_idx, y_idx, batch_size, pad_idx):
 
 def main():
     cmd = argparse.ArgumentParser("lstm for segmentor")
-    cmd.add_argument("--seed", help = "path of test data", default=1234)
+    cmd.add_argument("--seed", help = "path of test data", type=int, default=1234)
 
     # cmd.add_argument("--train_path", help = "path of train data", default='../data/train.txt')
     # cmd.add_argument("--devel_path", help = "path of devel data", default='../data/valid.txt')
@@ -82,14 +82,14 @@ def main():
 
     cmd.add_argument("--use_pretrain_unigram_embedding", type = bool, help = "path of test data", default=True)
     cmd.add_argument("--use_pretrain_bigram_embedding", type = bool, help = "path of test data", default=True)
-    cmd.add_argument("--batch_size", help = "path of test data", default=16)
+    cmd.add_argument("--batch_size", help = "path of test data", type=int, default=64)
     cmd.add_argument("--max_epoch", help = "path of test data", type=int, default=20)
     cmd.add_argument("--optimizer", help = "path of test data", default='Adam')
     cmd.add_argument("--lr", help = "path of test data", default=0.001)
     cmd.add_argument("--lr_decay", help = "path of test data", type=float, default=1.0)
     cmd.add_argument("--embed_size_uni", help = "path of test data", default=100)
     cmd.add_argument("--embed_size_bi", help = "path of test data", default=100)
-    cmd.add_argument("--hidden_size", help = "path of test data", default=256)
+    cmd.add_argument("--hidden_size", help = "path of test data", type=int, default=256)
     cmd.add_argument("--dropout", help = "path of test data", type=float, default=0.4)
     cmd.add_argument("--clip_grad", help = "path of test data", default=5)
 
@@ -97,7 +97,12 @@ def main():
 
     args = cmd.parse_args()
     print ('Training Parameters As Following:',args)
-    print (args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding)
+    with open ('../record/record', 'a+') as f:
+        f.write('-----------------------------\n')
+        f.write(str(args))
+        f.write('\n')
+        f.close()
+    logging.info('unigram: {0}, bigram: {1}'.format(args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding))
 
     torch.manual_seed(args.seed)
     random.seed(args.seed)
@@ -171,6 +176,11 @@ def main():
         logging.info('Round {0} ended: valid acc: {1}% F: {2}%'.format(t, valid_acc*100, valid_F*100))
     logging.info('Training Complete!: best test acc:{0}%, F: {1}%; best valid acc: {2}%, F: {3}%'.format(best_test_acc*100,\
                                                             best_test_F*100, best_valid_acc*100, best_valid_F*100))
+    with open ('../record/record', 'a+') as f:
+        f.write('Training Complete!: best test acc:{0}%, F: {1}%; best valid acc: {2}%, F: {3}%'.format(best_test_acc*100,\
+                                                            best_test_F*100, best_valid_acc*100, best_valid_F*100))
+        f.write('\n')
+        f.close()
 
 
 if __name__ == "__main__":

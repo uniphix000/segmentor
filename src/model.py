@@ -71,7 +71,6 @@ class EmbeddingLayer(nn.Module):
         #self.embedding.weight.data.uniform(-0.25, 0.25)
         weight = self.embedding.weight
         if (flag == True):
-            print ('im using!!')
             weight.data[:self.embed_num].copy_(torch.FloatTensor(self.embed_vecs))
 
     def forward(self, input):
