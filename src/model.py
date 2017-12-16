@@ -10,10 +10,10 @@ from torch import optim
 from torch.autograd import Variable
 from data_utils import predict_extraction
 from data_utils import load_embedding
-
+pad = 0
 
 class Model(nn.Module):
-    def __init__(self, uni_flag, bi_flag, embed_size_uni, embed_size_bi, hidden_size, label_size, word2idx_uni, word2idx_bi, dropout, uni_embed_path, bi_embed_path):
+    def __init__(self, uni_flag, bi_flag, embed_size_uni, embed_size_bi, hidden_size, label_size, word2idx_uni_num, word2idx_bi_num, dropout, uni_embed_path, bi_embed_path):
         super(Model, self).__init__()
         self.embed_size_uni = embed_size_uni
         self.embed_size_bi = embed_size_bi if bi_flag == True else 0
@@ -22,8 +22,8 @@ class Model(nn.Module):
         self.uni_flag = uni_flag
         self.bi_flag = bi_flag
         print ('flag:',(uni_flag, bi_flag))
-        self.embedding_uni = EmbeddingLayer(self.uni_flag, uni_embed_path, word2idx_uni)
-        self.embedding_bi = EmbeddingLayer(self.bi_flag, bi_embed_path, word2idx_bi)
+        self.embedding_uni = EmbeddingLayer(self.uni_flag, uni_embed_path, word2idx_uni_num)
+        self.embedding_bi = EmbeddingLayer(self.bi_flag, bi_embed_path, word2idx_bi_num)
         self.Linear = nn.Linear(2 * hidden_size, label_size)
         self.lstm = nn.LSTM(self.embed_size_uni + 2 * self.embed_size_bi, hidden_size, dropout=dropout, bidirectional=True, batch_first=True)
         self.Nloss = nn.NLLLoss()
@@ -61,13 +61,12 @@ class Model(nn.Module):
 
 class EmbeddingLayer(nn.Module):
 
-    def __init__(self, flag , embed_path, word_2_idx):
+    def __init__(self, flag , embed_path, word_2_idx_num):
         super(EmbeddingLayer, self).__init__()
         self.embed_num, self.embed_size, self.embed_words, self.embed_vecs = load_embedding(embed_path)
-        self.V = word_2_idx.get_word_size()
+        self.V = word_2_idx_num
         self.d = self.embed_size
-        self.pad = word_2_idx.get_word2idx()['pad']
-        self.embedding = nn.Embedding(self.V, self.d, padding_idx=self.pad)
+        self.embedding = nn.Embedding(self.V, self.d, padding_idx=pad)
         #self.embedding.weight.data.uniform(-0.25, 0.25)
         weight = self.embedding.weight
         if (flag == True):

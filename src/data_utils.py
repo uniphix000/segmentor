@@ -196,7 +196,18 @@ def predict_extraction(linear_output, sentences_lens):
     return y_predict
 
 
-
+def read_corpus_for_test(path):  #fixme !!!!!!!!!!!
+    words = []
+    uni_x_box = []
+    with codecs.open(path, 'r', encoding = 'utf-8') as f_train:
+        f_train_lines = f_train.read().strip().split('\n')
+        for line in f_train_lines:
+            uni_x = [word for word in line]
+            uni_x_box.append(uni_x)
+            bi_x = ['<s>' + uni_x[0]] + [uni_x[i] + uni_x[i+1] for i in range(len(uni_x)-1)] + [uni_x[len(uni_x)-1] + '<s/>']
+            words_set = (uni_x, bi_x)
+            words.append(words_set)
+    return words, uni_x_box
 
 
 
