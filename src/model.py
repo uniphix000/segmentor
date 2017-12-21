@@ -28,6 +28,7 @@ class Model(nn.Module):
         self.lstm = nn.LSTM(self.embed_size_uni + 2 * self.embed_size_bi, hidden_size, dropout=dropout, bidirectional=True, batch_first=True)
         self.Nloss = nn.NLLLoss()
         self.dropout = nn.Dropout(dropout)
+
     def forward(self, input, y, sentences_lens):
         '''
 

@@ -15,6 +15,7 @@ import json
 import sys
 import collections
 from bies_to_sentence import bies_to_segmentation
+import numpy as np
 
 
 logging.basicConfig(level=logging.INFO,
@@ -44,8 +45,8 @@ def eval_model(model, x_idx, y_idx, batch_size, pad_idx):
     '''
     model.eval()
     x_size = len(x_idx[0])
-    order = range(x_size)
-    random.shuffle(list(order))
+    order = list(range(x_size))
+    random.shuffle(order)
     correct_count , all_count = 0, 0
     predict_all = []
     gold_all = []
@@ -121,7 +122,8 @@ def main():
     logging.info('unigram: {0}, bigram: {1}'.format(args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding))
 
     torch.manual_seed(args.seed)
-    random.seed(args.seed)
+    np.random.seed(args.seed)
+
 
     logging.info('Data Loading...')
     train_x, train_y, valid_x, valid_y, test_x, test_y = read_data(args.train_path, args.devel_path, args.test_path) #train_x [([],[]),]
@@ -165,7 +167,7 @@ def main():
     logging.info('Word2idx Dictionary Generated! Dict Size = {0}, {1}'.format(word_2_idx_uni.get_word_size(),word_2_idx_bi.get_word_size()))
     train_x_size = len(train_x_idx[0]) #句子数
     valid_x_size = len(valid_x_idx[0])
-    order = range(train_x_size)
+    order = np.arange(train_x_size)
     pad_idx = word_2_idx_uni.word2idx['pad']
     model = Model(args.use_pretrain_unigram_embedding, args.use_pretrain_bigram_embedding, args.embed_size_uni, args.embed_size_bi, \
                   args.hidden_size, len(label2idx), word_2_idx_uni.get_word_size(), word_2_idx_bi.get_word_size(),
@@ -179,7 +181,7 @@ def main():
 
     best_valid_F, best_test_F, best_valid_acc, best_test_acc = 0, 0, 0, 0
     for t in range(args.max_epoch):
-        random.shuffle(list(order))
+        np.random.shuffle(order)
         for batch_start in range(0, train_x_size, args.batch_size):
             batch_end = batch_start + args.batch_size if batch_start \
                         + args.batch_size < train_x_size else train_x_size
